@@ -5,6 +5,7 @@ from dotenv import find_dotenv, load_dotenv
 from fastapi import APIRouter, Depends, status, Request
 import httpx
 from app.api.features.chatbot import chatbot_executor
+from app.api.features.info_agent import generate_info_agent_results
 from app.api.features.security_plan import compile_security_plan_chain
 from app.api.logger import setup_logger
 from app.api.auth.auth import (
@@ -18,6 +19,7 @@ from app.api.auth.auth import (
 )
 from passlib.hash import bcrypt
 import os
+from app.api.schemas.info_agent_schemas import InfoAgentArgs
 from app.api.schemas.schemas import ChatRequest, ChatResponse, Message
 from app.api.schemas.security_plan_schemas import SecurityPlanInput
 
@@ -151,5 +153,12 @@ async def security_plan( data: SecurityPlanInput, token_data: dict = Depends(get
         "mainTopic": data.mainTopic,
         "additionalDescription": data.additionalDescription
     })
+
+    return result
+
+@router.post("/info-agent")
+async def security_plan( data: InfoAgentArgs, token_data: dict = Depends(get_current_user)):
+
+    result = generate_info_agent_results(data)
 
     return result
