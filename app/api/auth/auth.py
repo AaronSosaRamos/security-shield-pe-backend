@@ -7,9 +7,10 @@ from fastapi import (
   status
 )
 import uuid
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from typing import Optional
-from jose import jwt
+from jose import JWTError, jwt
 from arango import ArangoClient
 from dotenv import load_dotenv
 import os
@@ -18,6 +19,8 @@ load_dotenv()
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def return_db_instance(): 
   client = ArangoClient()
@@ -56,6 +59,27 @@ class Token(BaseModel):
 def create_access_token(data: dict):
     to_encode = data.copy()
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_token(token: str):
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token inválido o expirado",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return payload  
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    return verify_token(token) 
 
 #from google.cloud import secretmanager
 
