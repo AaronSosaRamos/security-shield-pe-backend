@@ -13,3 +13,6 @@ python-arango
 passlib
 python-jose
 httpx
+langgraph
+tavily-python
+langchain-openai
