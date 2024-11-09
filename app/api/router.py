@@ -1,46 +1,77 @@
-#from app.api.features.schemas.schemas import RequestSchema, SpellingCheckerRequestArgs
 from datetime import date
 from http.client import HTTPException
 import uuid
+from dotenv import find_dotenv, load_dotenv
 from fastapi import APIRouter, Depends, status, Request
 import httpx
+from app.api.features.chatbot import chatbot_executor
 from app.api.logger import setup_logger
 from app.api.auth.auth import (
     RegisterUser,
     Token,
     User,
-    create_access_token, 
+    create_access_token,
+    get_current_user, 
     key_check,
     return_db_instance
 )
 from passlib.hash import bcrypt
+import os
+from app.api.schemas.schemas import ChatRequest, ChatResponse, Message
 
 logger = setup_logger(__name__)
 router = APIRouter()
+
+load_dotenv(find_dotenv())
 
 @router.get("/")
 def read_root():
     return {"Hello": "World"}
 
+APIS_PE_TOKEN = os.getenv("APIS_PE_TOKEN")
+
 @router.post("/user/register", response_model=Token)
 async def register(user: RegisterUser):
     db = return_db_instance()
+    
     if db["users"].find({"email": user.email}).count() > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El correo ya está registrado",
         )
-    
+
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get("https://api.ipify.org?format=json")
-            response.raise_for_status()
-            ip_signup = response.json().get("ip")
+            dni_response = await client.get(
+                f"https://api.apis.net.pe/v2/reniec/dni?numero={user.dni}",
+                headers={"Authorization": f"Bearer {APIS_PE_TOKEN}", "Accept": "application/json"}
+            )
+            dni_response.raise_for_status()
+            dni_data = dni_response.json()
+            numero_documento = dni_data.get("numeroDocumento")
+
+            if numero_documento != user.dni:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El DNI proporcionado no es válido o no coincide con la información registrada en RENIEC."
+                )
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Error al validar el DNI con el servicio de RENIEC."
+        )
+
+    try:
+        async with httpx.AsyncClient() as client:
+            ip_response = await client.get("https://api.ipify.org?format=json")
+            ip_response.raise_for_status()
+            ip_signup = ip_response.json().get("ip")
     except httpx.RequestError:
         ip_signup = "No disponible"
-    
+
     hashed_password = bcrypt.hash(user.password)
     user_id = str(uuid.uuid4())
+
     db["users"].insert({
         "_key": user_id,
         "dni": user.dni,
@@ -58,13 +89,17 @@ async def register(user: RegisterUser):
         "ipSignup": ip_signup,
         "signupDate": date.today().isoformat()
     })
-    access_token = create_access_token(data={"user_id": user_id, 
-                                             "email": user.email, 
-                                             "first_name": user.firstName, 
-                                             "last_name": user.lastName,
-                                             "department": user.department,
-                                             "province": user.province,
-                                             "district": user.district})
+
+    access_token = create_access_token(data={
+        "user_id": user_id,
+        "email": user.email,
+        "first_name": user.firstName,
+        "last_name": user.lastName,
+        "department": user.department,
+        "province": user.province,
+        "district": user.district
+    })
+
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/user/login", response_model=Token)
@@ -86,16 +121,18 @@ async def login(user: User):
                                              "district": db_user["district"]})
     return {"access_token": access_token, "token_type": "bearer"}
 
-# @router.post("/check-spelling")
-# async def submit_tool( data: RequestSchema, _ = Depends(key_check)):
-#     logger.info(f"Loading request args...")
-#     args = SpellingCheckerRequestArgs(spelling_checker_schema=data)
-#     logger.info(f"Args. loaded successfully")
+@router.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest, token_data: dict = Depends(get_current_user)):
+    user_name = request.user.fullName
+    chat_messages = request.messages
+    user_query = chat_messages[-1].payload.text
 
-#     chain = compile_chain()
+    response = chatbot_executor(user_name=user_name, user_query=user_query, messages=chat_messages)
 
-#     logger.info("Generating the spelling checking analysis")
-#     results = chain.invoke(args.validate_and_return())
-#     logger.info("The spelling checking analysis has been successfully generated")
+    formatted_response = Message(
+        role="ai",
+        type="text",
+        payload={"text": response}
+    )
 
-#     return results
+    return ChatResponse(data=[formatted_response])
