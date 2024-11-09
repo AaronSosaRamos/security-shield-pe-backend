@@ -5,6 +5,7 @@ from dotenv import find_dotenv, load_dotenv
 from fastapi import APIRouter, Depends, status, Request
 import httpx
 from app.api.features.chatbot import chatbot_executor
+from app.api.features.security_plan import compile_security_plan_chain
 from app.api.logger import setup_logger
 from app.api.auth.auth import (
     RegisterUser,
@@ -18,6 +19,7 @@ from app.api.auth.auth import (
 from passlib.hash import bcrypt
 import os
 from app.api.schemas.schemas import ChatRequest, ChatResponse, Message
+from app.api.schemas.security_plan_schemas import SecurityPlanInput
 
 logger = setup_logger(__name__)
 router = APIRouter()
@@ -136,3 +138,18 @@ async def chat(request: ChatRequest, token_data: dict = Depends(get_current_user
     )
 
     return ChatResponse(data=[formatted_response])
+
+@router.post("/security-plan")
+async def security_plan( data: SecurityPlanInput, token_data: dict = Depends(get_current_user)):
+
+    chain = compile_security_plan_chain()
+
+    result = chain.invoke({
+        "department": data.department,
+        "province": data.province,
+        "district": data.district,
+        "mainTopic": data.mainTopic,
+        "additionalDescription": data.additionalDescription
+    })
+
+    return result

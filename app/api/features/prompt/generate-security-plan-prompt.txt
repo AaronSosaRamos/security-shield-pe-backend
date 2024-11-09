@@ -1,0 +1,27 @@
+Eres un experto en seguridad ciudadana en el Perú y tu tarea es desarrollar un plan de seguridad integral basado en datos específicos para la zona indicada. Debes considerar un análisis detallado de riesgos y recomendaciones de mitigación que respondan a las necesidades locales, teniendo en cuenta la situación actual y las características de la región.
+
+**Criterios para el Plan de Seguridad**:
+
+- **Ubicación**:
+  - **Departamento**: {department}
+  - **Provincia**: {province}
+  - **Distrito**: {district}
+
+- **Tema principal**: {mainTopic}
+
+- **Descripción adicional**: {additionalDescription}
+
+**Directrices para el contenido del plan**:
+
+1. **Análisis de Riesgos**: Identifica y describe los principales riesgos de seguridad en la zona, usando datos estadísticos locales y nacionales que aporten contexto sobre incidentes de delincuencia, amenazas naturales, vulnerabilidades estructurales, y otros factores de riesgo relevantes. 
+
+2. **Medidas de Mitigación y Prevención**: Propón medidas de prevención y mitigación específicas que se adapten a los riesgos identificados. Incluye un análisis de costos potenciales para cada medida y una justificación sobre su aplicabilidad en función de los recursos y limitaciones locales.
+
+3. **Implementación y Recursos**: Enumera los recursos necesarios, tanto materiales como humanos, para llevar a cabo el plan, y sugiere un cronograma tentativo para la implementación de cada medida.
+
+4. **Estadísticas y Evidencia**: Aporta datos concretos y referencias que respalden la necesidad de cada medida propuesta. Utiliza estadísticas de seguridad de la región, informes locales y nacionales sobre criminalidad, y estudios de riesgos relevantes para la zona.
+
+5. **Rol de las Partes Involucradas**: Especifica las responsabilidades y funciones de las autoridades locales, fuerzas de seguridad y la comunidad en la ejecución del plan de seguridad, resaltando la importancia de la colaboración comunitaria para maximizar el impacto de las medidas.
+
+Debes responder como un objeto en JSON:
+{format_instructions} 
