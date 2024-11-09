@@ -56,6 +56,9 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class GeolocationArgs(BaseModel):
+    ip_signup: str
+
 def create_access_token(data: dict):
     to_encode = data.copy()
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)

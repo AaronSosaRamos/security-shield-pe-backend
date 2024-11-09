@@ -9,6 +9,7 @@ from app.api.features.info_agent import generate_info_agent_results
 from app.api.features.security_plan import compile_security_plan_chain
 from app.api.logger import setup_logger
 from app.api.auth.auth import (
+    GeolocationArgs,
     RegisterUser,
     Token,
     User,
@@ -101,7 +102,8 @@ async def register(user: RegisterUser):
         "last_name": user.lastName,
         "department": user.department,
         "province": user.province,
-        "district": user.district
+        "district": user.district,
+        "ip_signup": ip_signup
     })
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -122,7 +124,8 @@ async def login(user: User):
                                              "last_name": db_user["lastName"],
                                              "department": db_user["department"],
                                              "province": db_user["province"],
-                                             "district": db_user["district"]})
+                                             "district": db_user["district"],
+                                             "ip_signup": db_user["ipSignup"]})
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/chat", response_model=ChatResponse)
@@ -162,3 +165,20 @@ async def security_plan( data: InfoAgentArgs, token_data: dict = Depends(get_cur
     result = generate_info_agent_results(data)
 
     return result
+
+@router.post("/geolocation-info")
+async def obtain_geolocation_info(data: GeolocationArgs, token_data: dict = Depends(get_current_user)):
+    api_key = os.getenv("IP_GEOLOCATION_API_KEY") 
+    url = f"https://api.ipgeolocation.io/ipgeo?apiKey={api_key}&ip={data.ip_signup}"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url)
+            response.raise_for_status() 
+            return response.json()  
+        except httpx.HTTPStatusError as e:
+            print(f"Error en la solicitud: {e}")
+            return None
+        except httpx.RequestError as e:
+            print(f"Error de conexión: {e}")
+            return None
