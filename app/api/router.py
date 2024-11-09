@@ -58,7 +58,13 @@ async def register(user: RegisterUser):
         "ipSignup": ip_signup,
         "signupDate": date.today().isoformat()
     })
-    access_token = create_access_token(data={"user_id": user_id, "email": user.email})
+    access_token = create_access_token(data={"user_id": user_id, 
+                                             "email": user.email, 
+                                             "first_name": user.firstName, 
+                                             "last_name": user.lastName,
+                                             "department": user.department,
+                                             "province": user.province,
+                                             "district": user.district})
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/user/login", response_model=Token)
@@ -71,7 +77,13 @@ async def login(user: User):
             detail="Correo o contraseña incorrecta",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token = create_access_token(data={"user_id": db_user["_key"], "email": db_user["email"]})
+    access_token = create_access_token(data={"user_id": db_user["_key"], 
+                                             "email": db_user["email"], 
+                                             "first_name": db_user["firstName"], 
+                                             "last_name": db_user["lastName"],
+                                             "department": db_user["department"],
+                                             "province": db_user["province"],
+                                             "district": db_user["district"]})
     return {"access_token": access_token, "token_type": "bearer"}
 
 # @router.post("/check-spelling")
