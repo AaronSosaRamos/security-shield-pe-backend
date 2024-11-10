@@ -185,7 +185,7 @@ async def obtain_geolocation_info(data: GeolocationArgs, token_data: dict = Depe
             return None
 
 @router.post("/messages", status_code=status.HTTP_201_CREATED)
-async def save_message(message: MessageZoneChat):
+async def save_message(message: MessageZoneChat, token_data: dict = Depends(get_current_user)):
     db = return_db_instance()
     messages_collection = db.collection("messages")
     last_message = db.aql.execute(
@@ -212,7 +212,7 @@ async def save_message(message: MessageZoneChat):
         raise HTTPException(status_code=500, detail=f"Error al guardar el mensaje: {str(e)}")
     
 @router.get("/messages/{district}", status_code=status.HTTP_200_OK)
-async def get_last_six_messages(district: str):
+async def get_last_six_messages(district: str, token_data: dict = Depends(get_current_user)):
     try:
         db = return_db_instance()
         cursor = db.aql.execute(
