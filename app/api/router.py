@@ -21,6 +21,7 @@ from app.api.auth.auth import (
 from passlib.hash import bcrypt
 import os
 from app.api.schemas.info_agent_schemas import InfoAgentArgs
+from app.api.schemas.message_schema import MessageZoneChat
 from app.api.schemas.schemas import ChatRequest, ChatResponse, Message
 from app.api.schemas.security_plan_schemas import SecurityPlanInput
 
@@ -182,3 +183,51 @@ async def obtain_geolocation_info(data: GeolocationArgs, token_data: dict = Depe
         except httpx.RequestError as e:
             print(f"Error de conexión: {e}")
             return None
+
+@router.post("/messages", status_code=status.HTTP_201_CREATED)
+async def save_message(message: MessageZoneChat):
+    db = return_db_instance()
+    messages_collection = db.collection("messages")
+    last_message = db.aql.execute(
+        """
+        FOR msg IN messages
+            FILTER msg.district == @district
+            SORT msg.order DESC
+            LIMIT 1
+            RETURN msg.order
+        """,
+        bind_vars={"district": message.district}
+    )
+
+    last_order = next(last_message, 0)  
+    message_data = message.dict()
+    message_data["order"] = last_order + 1  
+    message_data["created_at"] = message_data["created_at"].isoformat()
+    message_data["updated_at"] = message_data.get("updated_at", None)
+
+    try:
+        messages_collection.insert(message_data)
+        return {"message": "Mensaje guardado con éxito", "data": message_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar el mensaje: {str(e)}")
+    
+@router.get("/messages/{district}", status_code=status.HTTP_200_OK)
+async def get_last_six_messages(district: str):
+    try:
+        db = return_db_instance()
+        cursor = db.aql.execute(
+            """
+            FOR msg IN messages
+                FILTER msg.district == @district
+                SORT msg.order DESC
+                LIMIT 6
+                RETURN msg
+            """,
+            bind_vars={"district": district}
+        )
+        
+        messages = [doc for doc in cursor][::-1]
+        
+        return {"data": messages}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener los mensajes: {str(e)}")
